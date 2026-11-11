@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<included>
+    <!-- Properties -->
+    <include resource="config/logging/logback-properties.xml" />
+
+    <!-- Console appender -->
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <layout class="ch.qos.logback.classic.PatternLayout">
+            <Pattern>${LOG_PATTERN}</Pattern>
+        </layout>
+    </appender>
+
+    <!-- Main log file -->
+    <appender name="MAIN_APPENDER" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${ROOT_LOG_DIR}/bull-bean-transformer.log</file>
+        <append>true</append>
+        <encoder>
+            <charset>UTF-8</charset>
+            <pattern>${LOG_PATTERN}</pattern>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${ROOT_LOG_DIR}/bull-bean-transformer-%d{yyyy-MM-dd}-%i.log.zip</fileNamePattern>
+            <maxFileSize>5MB</maxFileSize>
+            <!-- total size of all archive files, if total size is greater then the given value the old archives are deleted -->
+            <totalSizeCap>500MB</totalSizeCap>
+            <!-- days to keep -->
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+    </appender>
+
+    <!-- Third party service log file -->
+    <appender name="THIRD_PARTY_SERVICE_APPENDER" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${ROOT_LOG_DIR}/third-party-service.log</file>
+        <append>true</append>
+        <encoder>
+            <charset>UTF-8</charset>
+            <pattern>${LOG_PATTERN}</pattern>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${ROOT_LOG_DIR}/third-party-service-%d{yyyy-MM-dd}-%i.log.zip</fileNamePattern>
+            <maxFileSize>5MB</maxFileSize>
+            <!-- total size of all archive files, if total size is greater then the given value the old archives are deleted -->
+            <totalSizeCap>500MB</totalSizeCap>
+            <!-- days to keep -->
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+    </appender>
+</included>

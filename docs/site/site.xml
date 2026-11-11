@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<project>
+    <publishDate position="right"/>
+    <version position="right"/>
+    <skin>
+        <groupId>org.apache.maven.skins</groupId>
+        <artifactId>maven-fluido-skin</artifactId>
+        <version>1.8</version>
+    </skin>
+    <custom>
+        <fluidoSkin>
+            <topBarEnabled>false</topBarEnabled>
+            <sideBarEnabled>true</sideBarEnabled>
+            <gitHub>
+                <projectId>ExpediaGroup/bull</projectId>
+                <ribbonOrientation>right</ribbonOrientation>
+                <ribbonColor>#cf2d35</ribbonColor>
+            </gitHub>
+        </fluidoSkin>
+    </custom>
+    <body>
+        <head>
+            <![CDATA[
+                <link rel="apple-touch-icon" sizes="180x180" href="images/icon/apple-touch-icon.png">
+                <link rel="icon" type="image/png" sizes="32x32" href="images/icon/favicon-32x32.png">
+                <link rel="icon" type="image/png" sizes="16x16" href="images/icon/favicon-16x16.png">
+                <link rel="manifest" href="images/icon/site.webmanifest">
+                <link rel="mask-icon" href="images/icon/safari-pinned-tab.svg" color="#5bbad5">
+                <meta name="msapplication-TileColor" content="#ffffff">
+                <meta name="theme-color" content="#ffffff">
+            ]]>
+        </head>
+        <breadcrumbs>
+            <item name="Home" href="../"/>
+            <item name=" Bean Utils Light Library" href="${project.url}"/>
+        </breadcrumbs>
+        <menu name="Project info">
+            <item name="Glossary" href="/glossary.html" />
+            <item name="Use it in Kotlin" href="/kotlin.html" />
+        </menu>
+        <menu name="Transformer">
+            <item name="Bean Transformer" collapse="true" href="/transformer/beanTransformer.html">
+                <item name="Samples" href="/transformer/bean/samples.html" />
+                <item name="Performances" href="/transformer/bean/performance.html" />
+                <item name="Third Party Lib Comparison" href="/transformer/bean/thirdPartyLibComparison.html" />
+                <item name="How to test" href="/transformer/bean/testing.html" />
+            </item>
+            <item name="Map Transformer" collapse="true" href="/transformer/mapTransformer.html">
+                <item name="Samples" href="/transformer/map/samples.html" />
+            </item>
+        </menu>
+        <menu name="Bean Validation">
+            <item name="Samples" href="/validator/samples.html" />
+        </menu>
+        <menu name="Primitive type conversion">
+            <item name="Samples" href="/converter/samples.html" />
+        </menu>
+        <menu name="Quality check">
+            <item name="Coveralls" href="https://coveralls.io/github/ExpediaGroup/bull" />
+        </menu>
+        <menu name="Related Articles">
+            <item name="DZone" href="https://dzone.com/articles/how-to-transform-any-type-of-java-bean-with-one-li" />
+            <item name="InfoQ" collapse="true" href="/articles.html">
+                <item name="English" href="https://www.infoq.com/articles/expedia-rid-of-bean-transformers/" />
+                <item name="Portuguese" href="https://www.infoq.com/br/articles/expedia-rid-of-bean-transformers/" />
+            </item>
+        </menu>
+        <menu ref="reports" />
+    </body>
+</project>

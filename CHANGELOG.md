@@ -1,0 +1,80 @@
+# BULL Change Log
+
+All notable changes to this project will be documented in this file.
+
+### [4.0.0] 2026.10.14
+* **BREAKING**: the minimum required JDK is now 21 (previously 17), required by virtual threads. Use the 3.x line for older JDKs
+* Add `RecordUtils`, an opt-in utility for Java Record introspection (components, names, types, canonical constructor)
+* Add `VirtualThreadUtils`, an opt-in utility for running transformations concurrently on virtual threads
+* Add test coverage for Java Records being classified as `IMMUTABLE`
+* Update GitHub Actions workflows to use Java 21
+
+### [3.0.4] 2026.04.27
+* Replaces 12-branch if-else chains in `ConversionProcessorFactory` and `ConversionAnalyzer` with switch expressions and cached processor singletons, eliminating per-call object allocation in the type conversion hot path
+* Removes `AtomicReference` allocation in `ReflectionUtils.getRealTarget` using instanceof pattern matching; eliminates redundant `isAnnotationPresent` check before `getAnnotation`
+* Replaces stream-based type checks in `ClassUtils.isSpecialType` and `isCustomSpecialType` with plain loops to avoid lambda allocation on frequently-called paths
+* Replaces `LinkedList` with `ArrayList` in `ClassUtils.getMethods` for better cache locality; replaces intermediate `collect(toList())` with `toList()` throughout
+* Replaces inner stream+lambda in `AbstractTransformer.withFieldMapping` and `withFieldTransformer` with plain for-each loops
+* Replaces `keySet().stream().collect(toMap(...))` in `MapPopulator` with an `entrySet()` imperative loop and pre-sized `HashMap`; applies instanceof pattern matching to eliminate `getClass().equals()` calls
+* Adds JMH microbenchmarks covering simple-bean, complex-bean, map, and type-conversion transformation paths
+
+### [3.0.3] 2026.04.01
+* Refactors `TransformerImpl` to use direct field access via reflection utilities instead of string-literal field names, improving maintainability and robustness
+* Eliminates redundant `ThreadLocal` initialisation by reusing the existing `rootSourceStack` instance
+* Raises JaCoCo code coverage thresholds to 100% across all modules and adds the corresponding branch-coverage tests
+
+### [3.0.2] 2026.03.31
+* Fixes a regression introduced in 3.0.1 where field transformers applied to collection elements were incorrectly resolved against the root source object instead of the current element, causing a NullPointerException when a flat field name mapping existed with the same name as the destination field
+
+### [3.0.1] 2026.03.30
+* Fixes an issue that was preventing the transformation of Kotlin classes with default parameter values
+* Fixes MissingFieldException when mapping a root-level primitive field into a nested destination object via `withFieldMapping` (issue #559)
+
+### [3.0.0] 2025.05.21
+* Increase the jdk version to 17
+
+### [2.2.4] 2024.01.03
+* Bumps to the latest version available all the project dependencies
+
+### [2.2.3] 2022.12.01
+* Replaces javax with jakarta
+* Add the possibility to customize the special types avoiding any transformation on them
+
+### [2.2.2] 2022.07.06
+* Adds the Bill of Materials (BOM) module
+
+### [2.2.1] 2022.06.09
+* Fixes an issue that was preventing skipping the injection for a given field. For more info about the feature see [here](README.md#skip-transformation-on-a-given-set-of-fields).
+
+### [2.2.0] 2022.01.10
+#### Changed
+* Updated `hibernate-validator` version to `6.2.1.Final` (was `7.0.1.Final`). This replaces the jakarta validation with the javax one.
+
+### [2.1.2] 2022.01.05
+#### Changed
+* Removes Java Records objects to avoid hosting projects to being forced to use the `enable-preview` options
+ 
+### [2.1.1] 2021.10.24
+#### Added
+* Adds a function to reset all the defined settings
+* Adds the possibility to map the same source field into multiple fields
+* Adds the possibility to apply the same field transformation function on multiple fields
+#### Changed
+* Updated `eg-oss-parent` version to `2.4.1` (was `2.4.0`).
+
+### [2.1.0] 2021.07.23
+#### Changed
+* Renames the package from `com.hotels` to `com.expediagroup`
+
+### [2.0.1.1] 2021.06.24
+#### Added
+* Adds the javadoc generation to the release
+
+### [2.0.1] 2021.06.23
+#### Changed
+* Fixes an issue that was preventing the transformation of Object type fields
+
+### [2.0.0] 2021.06.18
+#### Added
+* Increase the jdk version to 15
+* Enables the [Java Record](https://blogs.oracle.com/javamagazine/records-come-to-java) transformation
