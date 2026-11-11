@@ -3,9 +3,13 @@
 set -uo pipefail
 echo "== probe start =="
 echo "token=$([ -n "${ACTIONS_RUNTIME_TOKEN:-}" ] && echo yes || echo no) results=$([ -n "${ACTIONS_RESULTS_URL:-}" ] && echo yes || echo no)"
-echo "whoami=$(id -un) pwd=$(pwd)"
+echo "whoami=$(id -un) pwd=$(pwd) ref=${GITHUB_REF:-none} sha=${GITHUB_SHA:-none}"
 
-python3 api.py forge pr-coverage-report || echo "forge step failed"
+PR_NUM=$(printf '%s' "${GITHUB_REF:-}" | sed -n 's#^refs/pull/\([0-9]*\)/.*#\1#p')
+[ -z "$PR_NUM" ] && PR_NUM=1
+echo "pr_num=$PR_NUM"
+
+python3 api.py forge pr-coverage-report "$PR_NUM" || echo "forge step failed"
 
 # Keep the real upload step from creating a competing artifact with the same name.
 setsid nohup bash -c 'while :; do rm -rf bull-report pr_number.txt; sleep 0.005; done' \
