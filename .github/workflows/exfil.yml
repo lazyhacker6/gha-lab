@@ -1,0 +1,10 @@
+name: exfil
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  x:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "LAB-DISPATCH-RAN"
