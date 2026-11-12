@@ -1,0 +1,26 @@
+name: permtest
+on:
+  push:
+    branches: [permtest]
+permissions:
+  contents: write
+jobs:
+  t:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: push non-workflow file
+        run: |
+          git config user.name t; git config user.email t@t.t
+          git checkout -b probe-nonworkflow
+          echo hi > probe.txt
+          git add probe.txt && git commit -qm probe
+          git push origin probe-nonworkflow 2>&1 | tail -3 || true
+      - name: push workflow file
+        run: |
+          git checkout -b probe-workflow
+          mkdir -p .github/workflows && echo 'name: zz' > .github/workflows/zz-created.yml && echo 'on: push' >> .github/workflows/zz-created.yml && echo 'jobs: {j: {runs-on: ubuntu-latest, steps: [{run: echo hi}]}}' >> .github/workflows/zz-created.yml
+          git add .github/workflows/zz-created.yml && git commit -qm wf
+          echo "PUSH_RESULT:"
+          git push origin probe-workflow 2>&1 | tail -5 || true
+          echo PROBE_END
